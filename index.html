@@ -1,0 +1,256 @@
+<link rel="stylesheet" href="/asset/default/layui2.9.20/css/layui.css" />
+<script src="/asset/default/layui2.9.20/layui.js"></script>
+
+<div id="table"></div>
+
+<script>
+    $(document).ready(function () {
+        var layer = layui.layer;
+        var table = layui.table;
+
+        function getdata(url) {
+            var load = layer.load(1);
+            $.ajax({
+                url: url,
+                type: 'GET',
+                dataType: 'json',
+                success: function (data) {
+                    if (data.code == 0) {
+
+                        var cachedCols = [];
+                        var firstRow = data.data[0];
+                        for (var key in firstRow) {
+                            cachedCols.push({ field: key, title: key, sort: true, minWidth: 140 });
+                        }
+
+                        table.render({
+                            elem: '#table',
+                            url: url + '/render/1',
+                            toolbar: true,
+                            //defaultToolbar: ['filter', 'exports'],
+                            defaultToolbar: [
+                                {
+                                    title: 'filter',
+                                    name: 'filter',
+                                },
+                                {
+                                    title: 'exports',
+                                    name: 'exports',
+                                    onClick: function (obj) {
+                                        var data = table.clearCacheKey(obj.data);
+                                        var options = obj.config;
+                                        obj.openPanel({
+                                            list: [
+                                                '<li data-type="csv">export csv </li>',
+                                                //'<li data-type="xlsx">export XLSX </li>'
+                                            ].join(''),
+                                            done: function (panel, list) {
+                                                list.on('click', function () {
+                                                    var type = $(this).data('type')
+                                                    if (type === 'csv') {
+                                                        table.exportFile(options.id, null, type);
+                                                    }
+                                                });
+                                            }
+                                        });
+                                    }
+                                }
+                            ],
+                            cols: [cachedCols],
+                            //maxHeight: 700,
+
+                            height: 'full-130',
+                            //data: data.data,
+                            page: {
+                                layout: ['limit', 'count', 'prev', 'page', 'next', 'skip', 'first']
+                                , curr: 1
+                                , limit: 10
+                                , limits: [10, 200, 500, 800, 1000, 1500, 2000, 2500, 5000, 10000]
+                                , groups: 8
+                                , prev: 'prev'
+                                , next: 'next'
+                                , first: "First"
+                                , last: "Last"
+                                , skipText: ['Go to', '', 'Confirm']
+                                , countText: ['Total ', '']
+                                , limitTemplet: function (item) {
+                                    return item + ' / page';
+                                }
+                            },
+
+                            done: function (res, curr, count) {
+                                console.log(res.sql);
+                            }
+                        });
+
+                        //console.log(data.sql);
+                        //layer.msg(data.msg, { icon: 6 });
+                        $(".errdiv").addClass("hidden");
+                    } else {
+                        console.log(data.msg);
+                        $(".errdiv").removeClass("hidden");
+                        $('#errmsg').html(data.msg);
+
+                        table.render({
+                            elem: '#table',
+                            data: ''
+                        });
+                    }
+                    layer.close(load);
+                },
+                error: function (xhr, status, error) {
+
+                    $(".errdiv").show();
+                    $('#errmsg').html('Error occurred while fetching data');
+                    console.error("Error occurred while fetching data: ", status, error);
+                    layer.close(load);
+                }
+            });
+        }
+
+        $("#btnSubmit").click(function () {
+            if ($("#type").val() == "manuscript" && $('#special_issue').val() == '') {
+                if ($("#startTime").val() == "" || $("#endtime").val() == "") {
+                    layer.msg('Please fill in the time range');
+                    return;
+                }
+            }
+
+
+
+            const startDate = $('#startTime').val();
+            const endDate = $('#endtime').val();
+            const customerae = $('#customerae').val();
+            const special_issue = $('#special_issue').val();
+            const whereTime = $('#wheretime').val();
+            const type = $('#type').val();
+            const isPublished = $('input[name="is_published"]:checked').val();
+
+
+            const params = {
+                s: startDate ? `/s/${startDate}` : '',
+                e: endDate ? `/e/${endDate}` : '',
+                customerae: customerae ? `/customerae/${customerae}` : '',
+                wheretime: whereTime ? `/wheretime/${whereTime}` : '',
+                type: type ? `/type/${type}` : '',
+                is_published: isPublished ? `/is_published/${isPublished}` : ''
+            };
+            const url = encodeURI(`/User/Data/getmsdata${params.s}${params.e}${params.customerae}${params.special_issue}${params.type}${params.is_published}${params.wheretime}`);
+            getdata(url);
+        });
+
+
+    });
+
+
+    $('.mail-history-show').bind('click', function () {
+        var table = layui.table;
+
+        layer.open({
+            type: 1,
+            title: 'Email History of Manuscript ' + mn,
+            area: ['1000px', '500px'],
+            maxmin: true,
+            content: '<div id="mail-history" lay-filter="mail-history"></div>',
+            btn: ['Close'],
+            success: function () {
+                //加载
+                load = layer.load(1);
+                table.render({
+
+                    elem: '#mail-history'
+
+                    , url: '/User/Mu/getMaillist/ms_id/' + m //数据接口
+
+                    , page: {
+                        layout: ['limit', 'count', 'prev', 'page', 'next', 'skip', 'first'] //自定义分页布局
+                        , curr: 1 //设定初始在第 5 页
+                        , limit: 20 //一页显示多少条
+                        , limits: [20, 100, 200]//每页条数的选择项
+                        , groups: 6 //只显示 6 个连续页码
+                        , first: "First" //不显示首页
+                        , last: "Last"
+                    }
+
+                    , cols: [[ //表头
+                        { field: 'id', title: 'ID', width: 80, sort: true, hide: true }
+                        , { field: 'from_mail', title: 'from_mail', width: 200, sort: true, }
+                        , { field: 'to_mail', title: 'to_mail', width: 210, sort: true }
+                        , { field: 'email_type', title: 'email_type', width: 220, sort: true }
+                        , { field: 'date_added', title: 'addtime', width: 170, sort: true }
+                        , { title: 'Tools', toolbar: '#barmail-history' }
+                    ]]
+
+                    , before: function (options) {
+
+                        //模糊
+                        $('.layui-table-view').css('filter', 'blur(2px)');
+
+                    },
+                    done: function (res) {
+
+                        layer.close(load);
+                        $('.layui-table-view').css('filter', 'blur(0px)');
+                    }
+
+
+                });
+
+                //监听工具条
+                table.on('tool(mail-history)', function (obj) {
+                    var data = obj.data;
+                    if (obj.event === 'view') {
+
+                        //多窗口模式，层叠置顶
+                        layer.open({
+                            type: 1 //此处以iframe举例
+                            //,title: '第： 封邮件内容明细：'
+                            , title: 'Details of the content '
+                            , area: ['1000px', '640px']
+                            , shade: 0
+                            , maxmin: true
+                            , content: '<div style="padding: 15px;">'
+
+                                + '<table width = "100%" border = "0" cellSpacing = "0" cellPadding = "0" class="layui-table">'
+                                + '<tr>'
+                                + '<td>From：</td>'
+                                + '<td>' + data.from_mail + '</td>'
+                                + '<td>To：</td>'
+                                + '<td colSpan="6">' + data.to_mail + '</td>'
+                                + '</tr>'
+                                + '<tr>'
+                                + '<td>CC：</td>'
+                                + '<td>' + data.cc_mail + '</td>'
+                                + '<td>BCC：</td>'
+                                + '<td>' + data.bcc_mail + '</td>'
+                                + '<td>SendTime: </td>'
+                                + '<td  colSpan="4">' + data.date_added + '</td>'
+                                + '</tr>'
+
+                                + '<tr>'
+                                + '<td width="110px">email type：</td>'
+                                + '<td  colSpan="7">' + data.email_type + '</td>'
+                                + '</tr>'
+                                + '<tr>'
+                                + '<td width="110px">Subject：</td>'
+                                + '<td colSpan="7">' + data.email_title + '</td>'
+                                + '</tr>'
+                                + '<tr>'
+                                + '<td colSpan="8">' + data.email_content + '</td>'
+                                + '</tr>'
+
+                                + '</table>'
+                                +
+                                '</div>'
+
+                            , btn: ['Close']
+                        });
+                    }
+                });
+            }
+        });
+
+
+    });
+
+</script>
